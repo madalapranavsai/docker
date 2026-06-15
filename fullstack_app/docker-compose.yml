@@ -1,0 +1,78 @@
+services:
+
+  # 1. Database Tier (PostgreSQL)
+  postgres:
+    image: postgres:15-alpine
+    container_name: db_tier
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - custom_bridge
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Cache Tier (Redis)
+  redis:
+    image: redis:7-alpine
+    container_name: cache_tier
+    networks:
+      - custom_bridge
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # 3. Application Tier (Node.js/Python Placeholder)
+  app:
+    image: node:20-alpine
+    container_name: app_tier
+    working_dir: /app
+    # Inline inline script simulation to spin up a server on port 3000 for verification
+    command: >
+      sh -c "npm init -y && 
+             npm install express && 
+             echo 'const express = require(\"express\"); const app = express(); app.get(\"/\", (req, res) => res.send(\"<h1>Full Stack Deployment Online</h1>\")); app.listen(3000, \"0.0.0.0\");' > index.js && 
+             node index.js"
+    environment:
+      DB_HOST: postgres
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+      REDIS_HOST: redis
+    networks:
+      - custom_bridge
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # 4. Web/Proxy Tier (NGINX)
+  nginx:
+    image: nginx:alpine
+    container_name: proxy_tier
+    ports:
+      - "80:80"
+    volumes:
+      - ./default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - custom_bridge
+    depends_on:
+      - app
+
+# Permanent Named Storage Volumes
+volumes:
+  postgres_data:
+
+# Isolated Network Architecture
+networks:
+  custom_bridge:
+    driver: bridge
