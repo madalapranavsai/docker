@@ -1,0 +1,51 @@
+services:
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: dev_node_app
+    ports:
+      - "3000:3000"
+    volumes:
+      # 1. BIND MOUNT: Syncs your Mac's current directory to /app in the container
+      - ./:/app
+      # 2. ANONYMOUS VOLUME: Protects the container's linux node_modules
+      - /app/node_modules
+    networks:
+      - dev_net
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    container_name: dev_postgres
+    environment:
+      POSTGRES_USER: devuser
+      POSTGRES_PASSWORD: devpass
+      POSTGRES_DB: devdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - dev_db_data:/var/lib/postgresql/data
+    networks:
+      - dev_net
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: dev_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - dev_net
+
+networks:
+  dev_net:
+    driver: bridge
+
+volumes:
+  dev_db_data:
