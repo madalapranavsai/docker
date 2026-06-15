@@ -1,0 +1,32 @@
+services:
+  # 1. The Frontend (Only attached to frontend_net)
+  frontend:
+    image: alpine
+    container_name: isolated_frontend
+    command: sleep infinity
+    networks:
+      - frontend_net
+
+  # 2. The Backend (The Bridge: Attached to BOTH networks)
+  backend:
+    image: alpine
+    container_name: isolated_backend
+    command: sleep infinity
+    networks:
+      - frontend_net
+      - backend_net
+
+  # 3. The Database (Only attached to backend_net)
+  database:
+    image: alpine
+    container_name: isolated_database
+    command: sleep infinity
+    networks:
+      - backend_net
+
+# Explicitly define the two segregated networks
+networks:
+  frontend_net:
+    driver: bridge
+  backend_net:
+    driver: bridge
